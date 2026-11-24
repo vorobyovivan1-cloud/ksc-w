@@ -1,20 +1,16 @@
-<!-- Kaspersky Security Center -> Wazuh: декодер событий экспорта в SIEM (Syslog RFC 5424).
-     Куда положить и как проверить: INSTRUCTION.md, раздел 5 («Декодер и правила»).
-     Приём на сервере Wazuh: раздел 3; настройка экспорта в KSC: раздел 2.
-     Пример строки: 1 2026-11-10T11:25:50.855Z  | - TEST_SIEM_CONNECTION [event@23668 et="TEST_SIEM_CONNECTION" etdn="Test Siem Connection"]
-     Поля попадают в индекс как data.ksc.* (список — раздел 9). Файл ставится отдельно, существующие декодеры не меняются. -->
+<!-- Kaspersky Security Center -> Wazuh: декодер событий экспорта в SIEM (Syslog RFC 5424). -->
 <decoder name="kaspersky-ksc">
   <prematch type="pcre2">\[event@23668 </prematch>
 </decoder>
 
-<!-- Заголовок RFC 5424: время, источник (сервер KSC или рабочая станция), приложение|версия (KES|11.0.0.0, 1093|1.0.0.0) -->
+<!-- Заголовок RFC 5424: пропускаем <11> через .*? -->
 <decoder name="kaspersky-ksc-fields">
   <parent>kaspersky-ksc</parent>
-  <regex type="pcre2">1 (\d{4}-\d\d-\d\dT\S+) (\S*) ([^\s|]*)\|?(\S*) \S+ \S+ \[event@23668 </regex>
+  <regex type="pcre2">.*?1 (\d{4}-\d\d-\d\dT\S+) (\S+) ([^\s|]*)\|?(\S*) \S+ \S+ \[event@23668 </regex>
   <order>ksc.time, ksc.server, ksc.app, ksc.app_version</order>
 </decoder>
 
-<!-- Параметры структурированных данных: порядок в событии не важен, каждый извлекается отдельно -->
+<!-- Параметры структурированных данных -->
 <decoder name="kaspersky-ksc-fields">
   <parent>kaspersky-ksc</parent>
   <regex type="pcre2">\bet="((?:[^"\\]|\\.)*)"</regex>
@@ -27,9 +23,10 @@
   <order>ksc.event_name</order>
 </decoder>
 
+<!-- Добавлена альтернатива hdn или hst -->
 <decoder name="kaspersky-ksc-fields">
   <parent>kaspersky-ksc</parent>
-  <regex type="pcre2">\bhdn="((?:[^"\\]|\\.)*)"</regex>
+  <regex type="pcre2">\b(?:hdn|hst)="((?:[^"\\]|\\.)*)"</regex>
   <order>ksc.host</order>
 </decoder>
 
@@ -51,15 +48,14 @@
   <order>ksc.task</order>
 </decoder>
 
-<!-- Текст события после структурированных данных (описание, объект, угроза).
-     Строки внутри разделены литералами \r\n -->
+<!-- Текст события -->
 <decoder name="kaspersky-ksc-fields">
   <parent>kaspersky-ksc</parent>
   <regex type="pcre2">\[event@23668 (?:[^\]\\]|\\.)*\]\s*(\S.*)$</regex>
   <order>ksc.message</order>
 </decoder>
 
-<!-- Поля из текста событий KES: пользователь, процесс, путь, компонент (консоль KSC на русском или английском) -->
+<!-- Поля из текста событий KES -->
 <decoder name="kaspersky-ksc-fields">
   <parent>kaspersky-ksc</parent>
   <regex type="pcre2">(?:Пользователь|User): (\S+)</regex>
