@@ -1,0 +1,34 @@
+// Отдельный индекс для KSC (необязательно). INSTRUCTION.md, раздел 6.
+// Файл: /usr/share/filebeat/module/wazuh/alerts/ingest/pipeline.json, массив "processors".
+// Комментарии (строки с //) в pipeline.json НЕ переносить — JSON их не допускает.
+//
+// 1) ПЕРЕД процессором "date_index_name" вставить два процессора.
+//    В "value" первого — ТЕКУЩЕЕ значение "index_name_prefix" из date_index_name
+//    (в Wazuh 4.x обычно "{{fields.index_prefix}}"):
+    {
+      "set": {
+        "tag": "ksc-index-default",
+        "field": "wazuh_index_prefix",
+        "value": "{{fields.index_prefix}}"
+      }
+    },
+    {
+      "set": {
+        "tag": "ksc-index-route",
+        "if": "ctx.rule instanceof Map && ctx.rule.groups instanceof List && ctx.rule.groups.contains('ksc')",
+        "field": "wazuh_index_prefix",
+        "value": "wazuh-alerts-4.x-ksc-"
+      }
+    },
+//
+// 2) В самом "date_index_name" заменить значение index_name_prefix:
+//      "index_name_prefix": "{{wazuh_index_prefix}}",
+//
+// 3) СРАЗУ ПОСЛЕ "date_index_name" вставить:
+    {
+      "remove": {
+        "tag": "ksc-index-cleanup",
+        "field": "wazuh_index_prefix",
+        "ignore_missing": true
+      }
+    },

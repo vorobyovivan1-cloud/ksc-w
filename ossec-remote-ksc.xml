@@ -1,0 +1,11 @@
+<!-- Приём событий KSC на сервере Wazuh. INSTRUCTION.md, раздел 3.
+     Вставить в /var/ossec/etc/ossec.conf внутрь <ossec_config> (рядом с другими блоками <remote>).
+     <KSC_SOURCE_IP> — адрес, с которого события РЕАЛЬНО приходят на Wazuh: IP сервера KSC
+     или адрес NAT, если трафик идёт через роутер с трансляцией (как узнать — раздел 3.4).
+     Порт должен совпадать с портом в настройке экспорта KSC (раздел 2.1). -->
+<remote>
+  <connection>syslog</connection>
+  <port>5515</port>
+  <protocol>tcp</protocol>
+  <allowed-ips><KSC_SOURCE_IP></allowed-ips>
+</remote>

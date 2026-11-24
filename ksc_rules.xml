@@ -1,0 +1,125 @@
+<!-- Kaspersky Security Center -> Wazuh: правила для событий KSC (декодер kaspersky-ksc, файл ksc_decoders.xml).
+     Куда положить и как проверить: INSTRUCTION.md, раздел 5. Уровни и группы: раздел 9.
+     Номера 112000–112099. Если на сервере они заняты — раздел 5.2 (как сдвинуть).
+     Все события KSC получают минимум уровень 3 и попадают в индекс (поиск: rule.groups:ksc);
+     письма — по email_alert_level в ossec.conf (обычно 12).
+     События KES приходят с числовым кодом (et="000000d6"), поэтому правила по ним — по названию (ksc.event_name):
+     русские названия проверены на реальных событиях, английские (консоль KSC на английском) — по документации.
+     События Сервера администрирования — по коду (KLAUD_EV_*, KLSRV_*). -->
+<group name="ksc,kaspersky,syslog,">
+
+  <rule id="112000" level="3">
+    <decoded_as>kaspersky-ksc</decoded_as>
+    <description>KSC: $(ksc.event_name) | $(ksc.host)</description>
+  </rule>
+
+  <rule id="112001" level="3">
+    <if_sid>112000</if_sid>
+    <field name="ksc.event_type" type="pcre2">^TEST_SIEM_CONNECTION$</field>
+    <description>KSC: тестовое сообщение экспорта в SIEM</description>
+    <group>ksc_test,</group>
+  </rule>
+
+  <!-- ===== Угрозы (KES) ===== -->
+  <!-- Не обезврежено / сетевая атака -> письмо -->
+  <rule id="112010" level="12">
+    <if_sid>112000</if_sid>
+    <field name="ksc.event_name" type="pcre2">не вылечен|не удален|не удалось (вылечить|удалить|обработать)|Обнаружена сетевая атака|Сетевая атака|(?i:not disinfected|not deleted|could not be (disinfected|deleted|processed)|network attack)</field>
+    <description>KSC: $(ksc.event_name) | $(ksc.host) $(ksc.host_ip) | $(ksc.user)</description>
+    <group>ksc_threat,ksc_critical,</group>
+  </rule>
+  <rule id="112013" level="12">
+    <if_sid>112000</if_sid>
+    <field name="ksc.event_type" type="pcre2">^(GNRL_EV_OBJECT_NOTCURED|GNRL_EV_ATTACK_DETECTED)$</field>
+    <description>KSC: $(ksc.event_name) | $(ksc.host) $(ksc.host_ip)</description>
+    <group>ksc_threat,ksc_critical,</group>
+  </rule>
+
+  <!-- Обнаружен вредоносный / подозрительный объект -->
+  <rule id="112011" level="10">
+    <if_sid>112000</if_sid>
+    <field name="ksc.event_name" type="pcre2">Обнаружен(а|о)? (вредоносн|угроз|подозрительн|объект)|GNRL_EV_VIRUS_FOUND|GNRL_EV_SUSPICIOUS_OBJECT_FOUND|(?i:(malicious|suspicious) object (was )?detected|threat (was )?detected)</field>
+    <description>KSC: $(ksc.event_name) | $(ksc.host) $(ksc.host_ip) | $(ksc.user)</description>
+    <group>ksc_threat,</group>
+  </rule>
+
+  <!-- Угроза обработана: вылечено, удалено, в карантине -->
+  <rule id="112012" level="5">
+    <if_sid>112000</if_sid>
+    <field name="ksc.event_name" type="pcre2">^Объект (вылечен|удален|помещен в карантин)|^(GNRL_EV_OBJECT_CURED|GNRL_EV_OBJECT_DELETED|GNRL_EV_OBJECT_QUARANTINED)$|(?i:^object (was )?(disinfected|deleted|moved to quarantine|quarantined))</field>
+    <description>KSC: $(ksc.event_name) | $(ksc.host)</description>
+    <group>ksc_threat_handled,</group>
+  </rule>
+
+  <!-- ===== Состояние защиты (KES) ===== -->
+  <!-- Компоненты защиты / защита выключены -->
+  <rule id="112060" level="10">
+    <if_sid>112000</if_sid>
+    <field name="ksc.event_name" type="pcre2">(З|з)ащит\S* (выключен|отключен|остановлен)|(?i:protection (components? )?(are |is )?(disabled|turned off|stopped))</field>
+    <description>KSC: $(ksc.event_name) | $(ksc.host) $(ksc.host_ip) | $(ksc.user)</description>
+    <group>ksc_protection_off,</group>
+  </rule>
+
+  <!-- Контроль устройств: операция с устройством запрещена -->
+  <rule id="112061" level="7">
+    <if_sid>112000</if_sid>
+    <field name="ksc.event_name" type="pcre2">Операция с устройством запрещена|(?i:operation with (the )?device (is )?(prohibited|blocked|denied))</field>
+    <description>KSC: операция с устройством запрещена | $(ksc.host) | $(ksc.user)</description>
+    <group>ksc_device_control,</group>
+  </rule>
+
+  <!-- 10+ запретов на одном устройстве за 10 минут: кто-то настойчиво пробует подключить носитель -->
+  <rule id="112062" level="10" frequency="10" timeframe="600" ignore="600">
+    <if_matched_sid>112061</if_matched_sid>
+    <same_field>ksc.host</same_field>
+    <description>KSC: многократные попытки подключить запрещённое устройство | $(ksc.host)</description>
+    <group>ksc_device_control,</group>
+  </rule>
+
+  <!-- Веб-контроль: соединение с сайтом с недоверенным сертификатом -->
+  <rule id="112063" level="6">
+    <if_sid>112000</if_sid>
+    <field name="ksc.event_name" type="pcre2">недоверенн\S* сертификат|(?i:untrusted certificate)</field>
+    <description>KSC: соединение с сайтом с недоверенным сертификатом | $(ksc.host) | $(ksc.user)</description>
+    <group>ksc_web,</group>
+  </rule>
+
+  <!-- ===== Сервер администрирования ===== -->
+  <rule id="112020" level="8">
+    <if_sid>112000</if_sid>
+    <field name="ksc.event_type" type="pcre2">^KLSRV_HOST_STATUS_CRITICAL$</field>
+    <description>KSC: статус устройства «Критический» | $(ksc.message)</description>
+    <group>ksc_host_status,</group>
+  </rule>
+
+  <rule id="112021" level="5">
+    <if_sid>112000</if_sid>
+    <field name="ksc.event_type" type="pcre2">^KLSRV_HOST_STATUS_WARNING$</field>
+    <description>KSC: статус устройства «Предупреждение» | $(ksc.message)</description>
+    <group>ksc_host_status,</group>
+  </rule>
+
+  <rule id="112030" level="7">
+    <if_sid>112000</if_sid>
+    <field name="ksc.event_type" type="pcre2">^KLSRV_EV_LICENSE</field>
+    <description>KSC: $(ksc.event_name)</description>
+    <group>ksc_license,</group>
+  </rule>
+
+  <!-- Аудит действий администраторов KSC (KLAUD_EV_OBJECTMODIFY, KLAUD_EV_ADMGROUP_CHANGED и др.) -->
+  <rule id="112040" level="5">
+    <if_sid>112000</if_sid>
+    <field name="ksc.event_type" type="pcre2">^KLAUD_EV_</field>
+    <description>KSC (аудит): $(ksc.event_name) | $(ksc.message)</description>
+    <group>ksc_audit,</group>
+  </rule>
+
+  <!-- 5+ обнаружений на одном устройстве за 10 минут -> письмо -->
+  <rule id="112050" level="12" frequency="5" timeframe="600" ignore="600">
+    <if_matched_sid>112011</if_matched_sid>
+    <same_field>ksc.host</same_field>
+    <description>KSC: многократные обнаружения угроз на устройстве $(ksc.host)</description>
+    <group>ksc_threat,ksc_critical,</group>
+  </rule>
+
+</group>
