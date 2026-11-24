@@ -1,0 +1,81 @@
+
+<decoder name="kaspersky-ksc">
+  <prematch type="pcre2">\[event@23668 </prematch>
+</decoder>
+
+
+<decoder name="kaspersky-ksc-fields">
+  <parent>kaspersky-ksc</parent>
+  <regex type="pcre2">^<\d+>1 (\d{4}-\d\d-\d\dT\S+) (\S+) ([^\s|]+)\|?(\S*) </regex>
+  <order>ksc.time, ksc.server, ksc.app, ksc.app_version</order>
+</decoder>
+
+
+<decoder name="kaspersky-ksc-fields">
+  <parent>kaspersky-ksc</parent>
+  <regex type="pcre2">\bet="((?:[^"\\]|\\.)*)"</regex>
+  <order>ksc.event_type</order>
+</decoder>
+
+<decoder name="kaspersky-ksc-fields">
+  <parent>kaspersky-ksc</parent>
+  <regex type="pcre2">\betdn="((?:[^"\\]|\\.)*)"</regex>
+  <order>ksc.event_name</order>
+</decoder>
+
+
+<decoder name="kaspersky-ksc-fields">
+  <parent>kaspersky-ksc</parent>
+  <regex type="pcre2">\b(?:hdn|hst)="((?:[^"\\]|\\.)*)"</regex>
+  <order>ksc.host</order>
+</decoder>
+
+<decoder name="kaspersky-ksc-fields">
+  <parent>kaspersky-ksc</parent>
+  <regex type="pcre2">\bhip="((?:[^"\\]|\\.)*)"</regex>
+  <order>ksc.host_ip</order>
+</decoder>
+
+<decoder name="kaspersky-ksc-fields">
+  <parent>kaspersky-ksc</parent>
+  <regex type="pcre2">\bgn="((?:[^"\\]|\\.)*)"</regex>
+  <order>ksc.group</order>
+</decoder>
+
+<decoder name="kaspersky-ksc-fields">
+  <parent>kaspersky-ksc</parent>
+  <regex type="pcre2">\btdn="((?:[^"\\]|\\.)*)"</regex>
+  <order>ksc.task</order>
+</decoder>
+
+
+<decoder name="kaspersky-ksc-fields">
+  <parent>kaspersky-ksc</parent>
+  <regex type="pcre2">\[event@23668 (?:[^\]\\]|\\.)*\]\s*([\s\S]*?)(?:\\r\\n)?$</regex>
+  <order>ksc.message</order>
+</decoder>
+
+
+<decoder name="kaspersky-ksc-fields">
+  <parent>kaspersky-ksc</parent>
+  <regex type="pcre2">(?:Пользователь|User): (\S+)</regex>
+  <order>ksc.user</order>
+</decoder>
+
+<decoder name="kaspersky-ksc-fields">
+  <parent>kaspersky-ksc</parent>
+  <regex type="pcre2">(?:Название|Name): (.+?)(?:\\r\\n|\s*$)</regex>
+  <order>ksc.process</order>
+</decoder>
+
+<decoder name="kaspersky-ksc-fields">
+  <parent>kaspersky-ksc</parent>
+  <regex type="pcre2">(?:Путь к приложению|Application path): (.+?)(?:\\r\\n|\s*$)</regex>
+  <order>ksc.process_path</order>
+</decoder>
+
+<decoder name="kaspersky-ksc-fields">
+  <parent>kaspersky-ksc</parent>
+  <regex type="pcre2">(?:Компонент|Component): (.+?)(?:\\r\\n|\s*$)</regex>
+  <order>ksc.component</order>
+</decoder>
